@@ -257,3 +257,10 @@ progress {
   font-size: inherit;
   padding: 0.8rem;
 }
+
+.flex {
+  max-width: 70rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
