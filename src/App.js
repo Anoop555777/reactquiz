@@ -6,17 +6,26 @@ import Questions from "./components/Questions";
 import "./App.css";
 import { useEffect, useReducer, useState } from "react";
 import StartScreen from "./components/StartScreen";
-import Button from "./components/Button";
+
+import Progress from "./components/Progress";
+import Footer from "./components/Footer";
+import Result from "./components/Result";
 
 const initialState = {
   questions: [],
   status: "",
   index: 0,
+  remainingTime: 10,
 };
 
 function reducerFun(state, action) {
   if (action.type === "dataRecived")
-    return { ...state, questions: action.payload, status: "ready" };
+    return {
+      ...state,
+      questions: action.payload,
+      status: "ready",
+      remainingTime: state.questions.length * 60,
+    };
   else if (action.type === "dataFailed") return { ...state, status: "failed" };
   else if (action.type === "dataLoading")
     return { ...state, status: "loading" };
@@ -25,10 +34,26 @@ function reducerFun(state, action) {
     return { ...state, index: state.index + 1 };
   else if (action.type === "prevQuestion")
     return { ...state, index: state.index - 1 };
+  else if (action.type === "finishQuestion")
+    return { ...state, status: "finish" };
+  else if (action.type === "restart")
+    return {
+      ...state,
+      status: "ready",
+      index: 0,
+      remainingTime: state.questions.length * 60,
+    };
+  else if (action.type === "timer") {
+    return {
+      ...state,
+      remainingTime: state.remainingTime - 1,
+      status: state.remainingTime === 0 ? "finish" : "active",
+    };
+  }
 }
 
 function App() {
-  const [{ questions, status, index }, dispatch] = useReducer(
+  const [{ questions, status, index, remainingTime }, dispatch] = useReducer(
     reducerFun,
     initialState
   );
@@ -55,7 +80,8 @@ function App() {
 
   const setAnswerHandler = (i) => {
     const newArr = [...answers];
-    newArr[index] = i;
+    if (newArr[index] === i) newArr[index] = null;
+    else newArr[index] = i;
     setAnswer(newArr);
   };
 
@@ -68,27 +94,38 @@ function App() {
           <StartScreen noOfQuestions={noOfQuestions} dispatch={dispatch} />
         )}
         {status === "active" && (
-          <Questions
-            question={questions[index]}
-            dispatch={setAnswerHandler}
+          <>
+            <Progress
+              noOfQuestions={noOfQuestions}
+              index={index}
+              remainingTime={remainingTime}
+              dispatch={dispatch}
+            />
+            <Questions
+              question={questions[index]}
+              dispatch={setAnswerHandler}
+              answers={answers}
+              index={index}
+            />
+
+            <Footer
+              noOfQuestions={noOfQuestions}
+              index={index}
+              status={status}
+              dispatch={dispatch}
+            />
+          </>
+        )}
+
+        {status === "finish" && (
+          <Result
+            questions={questions}
             answers={answers}
-            index={index}
+            setAnswer={setAnswer}
+            dispatch={dispatch}
           />
         )}
-        {status === "active" && (
-          <div className="flex">
-            {index === 0 || (
-              <Button dispatch={() => dispatch({ type: "prevQuestion" })}>
-                Prev
-              </Button>
-            )}
-            {index === noOfQuestions - 1 || (
-              <Button dispatch={() => dispatch({ type: "nextQuestion" })}>
-                Next
-              </Button>
-            )}
-          </div>
-        )}
+
         {status === "error" && <Error />}
       </Main>
     </div>
